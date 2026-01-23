@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyApp Demo — Full System Simulation (Auth / Chat / TV / Admin / Ops)</title>
+
+  <!-- External libs -->
+  <link href="https://unpkg.com/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+  <script src="https://unpkg.com/prismjs@1.29.0/prism.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.0/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.3.5/dist/hls.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#071028;--card:#07182a;--muted:#9fb0c8;--text:#e6eef8;--accent:#50fa7b;--border:#213043;
+      --panel-radius:10px;--gap:12px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--text);background:linear-gradient(180deg,#071028 0%, #071528 60%);padding:18px}
+    .app{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:240px 1fr;gap:18px}
+    .sidebar{background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:12px;border-radius:var(--panel-radius)}
+    .main{background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:12px;border-radius:var(--panel-radius)}
+    h1{font-size:18px;margin:0 0 8px 0}
+    .nav{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .nav button{background:transparent;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;text-align:left;cursor:pointer}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .tabs{display:flex;gap:8px}
+    .tag{padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);}
+    .card{background:transparent;border-radius:8px;padding:12px;border:1px solid var(--border);margin-bottom:12px}
+    input, select, textarea{background:transparent;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;width:100%}
+    .row{display:flex;gap:8px}
+    .btn{background:var(--accent);border:none;color:#000;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px}
+    .flex{display:flex;gap:8px;align-items:center}
+    .chat-window{height:300px;overflow:auto;padding:8px;border-radius:6px;background:rgba(255,255,255,0.01);border:1px solid var(--border)}
+    .message{padding:8px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
+    .message.me{background:linear-gradient(90deg, rgba(80,250,123,0.08), rgba(80,250,123,0.03));border-left:4px solid rgba(80,250,123,0.9)}
+    .message.meta{font-size:12px;color:var(--muted);margin-bottom:4px}
+    .admin-badge{background:#ffb300;color:#000;padding:2px 6px;border-radius:6px;font-size:12px;margin-left:6px}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted)}
+    .video-wrap{background:#000;border-radius:6px;padding:6px;border:1px solid var(--border)}
+    .ops-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .log{max-height:180px;overflow:auto;background:rgba(255,255,255,0.01);border-radius:6px;padding:8px;border:1px solid var(--border);font-family:monospace;font-size:13px}
+    .user-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px;border-radius:6px}
+    .danger{background:#ff5252;color:#000;border-radius:6px;padding:6px 8px}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:980px){.app{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <h1>MyApp Demo</h1>
+      <div class="muted">Simulated full stack features (client-only demo)</div>
+
+      <div class="nav" id="nav">
+        <button data-tab="home">Home</button>
+        <button data-tab="chat">Chat & Realtime</button>
+        <button data-tab="tv">TV / Streaming</button>
+        <button data-tab="admin">Admin Panel</button>
+        <button data-tab="ops">Ops / Monitoring</button>
+        <button data-tab="frameworks">Frameworks API</button>
+        <button data-tab="themes">Themes</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div id="authBox" class="card">
+          <div id="authStatus" class="small muted">Not signed in</div>
+          <div style="margin-top:8px" id="authControls">
+            <button id="showLogin" class="btn" style="width:100%">Sign in / Register</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="small muted">Active session</div>
+          <div id="sessionInfo" style="margin-top:6px" class="small">—</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="tabs"><div id="currentTab" class="pill">Home</div></div>
+        <div class="flex">
+          <div id="userBadge" class="muted">guest</div>
+        </div>
+      </div>
+
+      <div id="content">
+        <!-- Home -->
+        <section id="home" class="tabcontent">
+          <div class="card">
+            <h2>Welcome</h2>
+            <p class="muted">นี่เป็นเดโมระบบครบวงจร (Auth, Chat, Streaming, Admin, Ops, Frameworks API integration) — ทั้งหมดรันเป็น client-side simulation เพื่อทดสอบ UI/flows</p>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button id="goChat" class="btn">Open Chat</button>
+              <button id="goTV" class="btn">Open TV</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Quick features</h3>
+            <ul class="muted">
+              <li>Auth: email/password, OAuth simulated, refresh token rotation</li>
+              <li>Chat: rooms, moderation (mute/ban), audit log</li>
+              <li>TV: HLS (if supported) or MP4 player, playlist</li>
+              <li>Admin: user & channel management, export audit log</li>
+              <li>Ops: synthetic checks, Prometheus-like metrics and charts</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Chat -->
+        <section id="chat" class="tabcontent" style="display:none">
+          <div class="card">
+            <h2>Chat & Realtime</h2>
+            <div class="row" style="margin-bottom:8px">
+              <select id="roomSelect" style="width:220px"></select>
+              <button id="joinRoomBtn" class="btn">Join Room</button>
+              <button id="leaveRoomBtn" class="pill">Leave</button>
+              <div id="roomStatus" class="muted" style="margin-left:8px">Not in room</div>
+            </div>
+
+            <div class="row">
+              <div style="flex:1">
+                <div class="chat-window" id="chatWindow"></div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <input id="messageInput" placeholder="Type a message..." />
+                  <button id="sendMsgBtn" class="btn">Send</button>
+                </div>
+              </div>
+              <div style="width:320px">
+                <div class="card">
+                  <div class="small muted">Users in room</div>
+                  <div id="roomUsers" style="margin-top:8px"></div>
+                </div>
+
+                <div class="card" style="margin-top:8px">
+                  <div class="small muted">Moderation (admin/pmod)</div>
+                  <div style="margin-top:8px">
+                    <input id="targetUser" placeholder="username to act on" />
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                      <button id="muteBtn" class="pill">Mute</button>
+                      <button id="banBtn" class="danger">Ban</button>
+                      <button id="unbanBtn" class="pill">Unban</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Audit Log</h3>
+            <div id="auditLog" class="log"></div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button id="exportAuditCSV" class="btn">Export CSV</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- TV -->
+        <section id="tv" class="tabcontent" style="display:none">
+          <div class="card">
+            <h2>TV / Streaming</h2>
+            <div style="display:flex;gap:12px">
+              <div style="flex:1">
+                <div class="video-wrap">
+                  <video id="tvPlayer" controls playsinline style="width:100%;height:360px;background:#000"></video>
+                </div>
+
+                <div style="margin-top:10px;display:flex;gap:8px">
+                  <button id="prevBtn" class="pill">Prev</button>
+                  <button id="playBtn" class="btn">Play</button>
+                  <button id="nextBtn" class="pill">Next</button>
+                </div>
+              </div>
+
+              <div style="width:320px">
+                <div class="small muted">Channels</div>
+                <div id="channelList" style="margin-top:8px"></div>
+                <div style="margin-top:10px">
+                  <div class="small muted">Playlist (local)</div>
+                  <div id="playlist" style="margin-top:6px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Admin -->
+        <section id="admin" class="tabcontent" style="display:none">
+          <div class="card">
+            <h2>Admin Panel</h2>
+            <div class="row">
+              <div style="flex:1">
+                <h4>Users</h4>
+                <div id="usersList"></div>
+              </div>
+              <div style="width:360px">
+                <h4>Moderation Dashboard</h4>
+                <div id="moderationStats" class="muted"></div>
+                <div style="margin-top:8px">
+                  <button id="exportAuditBtn" class="btn">Export Audit (CSV)</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ops -->
+        <section id="ops" class="tabcontent" style="display:none">
+          <div class="card">
+            <h2>Ops / Monitoring</h2>
+            <div class="ops-grid">
+              <div>
+                <h4>Synthetic Checks</h4>
+                <div id="syntheticLog" class="log"></div>
+              </div>
+              <div>
+                <h4>Metrics</h4>
+                <canvas id="metricChart" style="width:100%;height:180px"></canvas>
+              </div>
+            </div>
+            <div style="margin-top:10px">
+              <h4>Health endpoints</h4>
+              <div class="muted">/health/basic • /health/liveness • /health/readiness</div>
+              <div style="margin-top:8px" id="healthStatus"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Frameworks API -->
+        <section id="frameworks" class="tabcontent" style="display:none">
+          <div class="card">
+            <h2>Frameworks API generator (simulated)</h2>
+            <div class="muted">Generates .netlify/v1 files in a ZIP for download (client simulation). Use server integration for real writes.</div>
+            <div style="margin-top:8px">
+              <textarea id="fwConfig" style="height:140px;">
+{
+  "edge_functions": [{ "function":"auth","path":"/admin" }],
+  "functions": { "directory":"myfunctions/", "included_files":["**/*.ts"] }
+}
+              </textarea>
+              <div style="margin-top:8px;display:flex;gap:8px">
+                <button id="fwGenerate" class="btn">Generate ZIP</button>
+                <button id="fwDownloadPayload" class="pill">Download payload</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Themes (previous feature) -->
+        <section id="themes" class="tabcontent" style="display:none">
+          <div class="card">
+            <h2>Themes & Editor</h2>
+            <div class="muted">Previous theme system integrated — open Themes demo (from earlier) in separate build when needed.</div>
+            <div style="margin-top:8px">
+              <button id="openThemesDemo" class="btn">Open Theme Demo (new window)</button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <footer>Demo only — actions are simulated locally. For real production features, wire server-side NestJS services, Redis, Mongo, and secure auth flows.</footer>
+    </main>
+  </div>
+
+  <!-- Login/Register Modal -->
+  <div id="authModal" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);min-width:320px;background:var(--card);border:1px solid var(--border);padding:12px;border-radius:10px;z-index:60">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong id="authModalTitle">Sign in</strong>
+      <button id="closeAuth">Close</button>
+    </div>
+    <div style="margin-top:10px">
+      <div id="oauthRow" style="display:flex;gap:8px;margin-bottom:8px">
+        <button id="oauthGoogle" class="pill">Sign in with Google</button>
+        <button id="oauthFacebook" class="pill">Facebook</button>
+        <button id="oauthLine" class="pill">LINE</button>
+      </div>
+      <div id="emailForm">
+        <input id="emailInput" placeholder="Email" />
+        <input id="passInput" placeholder="Password" type="password" style="margin-top:8px" />
+        <select id="roleSelect" style="margin-top:8px">
+          <option value="USER">User</option>
+          <option value="PREMIUM">Premium</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="loginBtn" class="btn">Sign in</button>
+          <button id="registerBtn" class="pill">Register</button>
+        </div>
+      </div>
+      <div id="authMsg" class="muted" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <script>
+    /*****************************************************************************
+     * Full system client-side simulation
+     * - FakeServer: simulates auth, tokens, user store, chat rooms, audit log, synthetic checks
+     * - UI wiring: tabs, auth modal, chat flows, tv player, admin ops
+     *
+     * IMPORTANT:
+     * This is a front-end only simulation for prototyping UX/flows.
+     * For production replace FakeServer calls with real API endpoints (NestJS / Mongo / Redis).
+     *****************************************************************************/
+
+    /* ---------------- FakeServer (in-memory persistence + localStorage) ---------------- */
+    const LS_USERS = "demo:users_v1";
+    const LS_AUDIT = "demo:audit_v1";
+    const LS_BANS = "demo:bans_v1";
+    const LS_ROOMS = "demo:rooms_v1";
+    const LS_SESSION = "demo:session_v1";
+
+    function nowISO(){ return new Date().toISOString(); }
+
+    class FakeServer {
+      constructor(){
+        // load storage or initialize
+        this.users = JSON.parse(localStorage.getItem(LS_USERS) || "null") || [
+          { id: "u_admin", email:"admin@demo", password:"admin", roles:["ADMIN","PREMIUM"], display:"admin" },
+          { id: "u_alice", email:"alice@demo", password:"alice", roles:["PREMIUM"], display:"alice" },
+          { id: "u_bob", email:"bob@demo", password:"bob", roles:["USER"], display:"bob" }
+        ];
+        this.audit = JSON.parse(localStorage.getItem(LS_AUDIT) || "null") || [];
+        this.bans = JSON.parse(localStorage.getItem(LS_BANS) || "null") || {}; // {room: {userId:true}}
+        this.rooms = JSON.parse(localStorage.getItem(LS_ROOMS) || "null") || {
+          "public": { id:"public", name:"Public Chat", premium:false, users:[] },
+          "premium-lounge": { id:"premium-lounge", name:"Premium Lounge", premium:true, users:[] },
+          "mods": { id:"mods", name:"Moderators", premium:true, users:[] }
+        };
+        // messages store
+        this.messages = {}; // roomId -> [{id,user,text,time}]
+        for(const r of Object.values(this.rooms)) this.messages[r.id] = this.messages[r.id] || [];
+        // sessions: token -> {userId,exp, refresh}
+        this.sessions = {};
+        this._saveAll();
+      }
+
+      _saveAll(){
+        localStorage.setItem(LS_USERS, JSON.stringify(this.users));
+        localStorage.setItem(LS_AUDIT, JSON.stringify(this.audit));
+        localStorage.setItem(LS_BANS, JSON.stringify(this.bans));
+        localStorage.setItem(LS_ROOMS, JSON.stringify(this.rooms));
+      }
+
+      // Auth
+      register({email, password, role, display}) {
+        if(this.users.find(u=>u.email===email)) throw new Error("Email exists");
+        const id = "u_" + Math.random().toString(36).slice(2,9);
+        const user = { id, email, password, roles: [role||"USER"], display: display || email.split("@")[0] };
+        this.users.push(user); this._saveAll();
+        this._audit(user.id, "register", {email});
+        return { user: this._safeUser(user) };
+      }
+
+      login({email,password}){
+        const user = this.users.find(u=>u.email===email && u.password===password);
+        if(!user) throw new Error("Invalid credentials");
+        const token = this._issueTokens(user.id);
+        this._audit(user.id, "login", {});
+        return { token, user: this._safeUser(user) };
+      }
+
+      oauthLogin({provider, tokenFake}) {
+        // simulate returning or creating a user from provider
+        const pseudoEmail = provider + "+" + (tokenFake||"user") + "@oauth.demo";
+        let user = this.users.find(u=>u.email===pseudoEmail);
+        if(!user){
+          user = { id: "u_"+Math.random().toString(36).slice(2,9), email: pseudoEmail, password: "", roles:["USER"], display: provider+" user" };
+          this.users.push(user);
+        }
+        this._saveAll();
+        const tk = this._issueTokens(user.id);
+        this._audit(user.id, "oauth_login", {provider});
+        return { token: tk, user: this._safeUser(user) };
+      }
+
+      _issueTokens(userId){
+        const accessExp = Date.now() + 60*1000; // short lived 60s
+        const refreshExp = Date.now() + 24*60*60*1000; // refresh 24h
+        const access = "AT-"+Math.random().toString(36).slice(2,14);
+        const refresh = "RT-"+Math.random().toString(36).slice(2,16);
+        this.sessions[access] = { userId, exp: accessExp, refresh, refreshExp };
+        // store mapping refresh->user
+        this.sessions[refresh] = { userId, exp: refreshExp, isRefresh:true };
+        this._saveAll();
+        return { access, accessExp, refresh, refreshExp };
+      }
+
+      refreshToken(refreshToken) {
+        const rec = this.sessions[refreshToken];
+        if(!rec || !rec.isRefresh || rec.exp < Date.now()) throw new Error("Invalid refresh");
+        return this._issueTokens(rec.userId);
+      }
+
+      verifyAccess(accessToken) {
+        const rec = this.sessions[accessToken];
+        if(!rec || rec.exp < Date.now()) throw new Error("Invalid/Expired access");
+        return rec.userId;
+      }
+
+      _safeUser(u){ return {id:u.id, email:u.email, display:u.display, roles:u.roles} }
+
+      // Users admin
+      listUsers(){ return this.users.map(u=>this._safeUser(u)); }
+      setUserRoles(id, roles){
+        const u = this.users.find(x=>x.id===id); if(!u) throw new Error("no user");
+        u.roles = roles; this._saveAll(); this._audit("system","setUserRoles",{id,roles}); return this._safeUser(u);
+      }
+      banUser(roomId, userId){
+        this.bans[roomId] = this.bans[roomId] || {};
+        this.bans[roomId][userId] = true; this._saveAll();
+        this._audit("system","ban",{roomId,userId});
+      }
+      unbanUser(roomId, userId){
+        if(this.bans[roomId]) delete this.bans[roomId][userId];
+        this._saveAll();
+        this._audit("system","unban",{roomId,userId});
+      }
+      isBanned(roomId,userId){ return !!(this.bans[roomId] && this.bans[roomId][userId]); }
+
+      // Chat / rooms
+      listRooms(){ return Object.values(this.rooms); }
+      joinRoom(roomId, userId){
+        const room = this.rooms[roomId]; if(!room) throw new Error("no room");
+        if(this.isBanned(roomId,userId)) throw new Error("banned");
+        room.users = Array.from(new Set([...room.users, userId]));
+        this._saveAll(); this._audit(userId,"join_room",{roomId});
+        return {room, users: room.users};
+      }
+      leaveRoom(roomId, userId){
+        const room = this.rooms[roomId];
+        if(!room) return;
+        room.users = room.users.filter(x=>x!==userId); this._saveAll(); this._audit(userId,"leave_room",{roomId});
+      }
+      sendMessage(roomId, userId, text){
+        if(this.isBanned(roomId,userId)) throw new Error("banned");
+        const room = this.rooms[roomId]; if(!room) throw new Error("no room");
+        const id = "m_" + Math.random().toString(36).slice(2,9);
+        const msg = { id, userId, text, time: nowISO() };
+        this.messages[roomId] = this.messages[roomId] || [];
+        this.messages[roomId].push(msg);
+        this._audit(userId,"send_message",{roomId,text});
+        // publish via BroadcastChannel so other tabs/devices can receive
+        try {
+          const bc = new BroadcastChannel("demo-chat");
+          bc.postMessage({type:"message",roomId,msg});
+        } catch(e){}
+        return msg;
+      }
+      getMessages(roomId, limit=200){ return (this.messages[roomId]||[]).slice(-limit); }
+
+      // Audit
+      _audit(actor, action, meta){
+        this.audit.push({time:nowISO(),actor,action,meta});
+        localStorage.setItem(LS_AUDIT, JSON.stringify(this.audit));
+      }
+      getAudit(){ return this.audit.slice().reverse(); }
+
+      // Synthetic checks (simulate)
+      runSyntheticChecks(){
+        // return a map of checks with ok/latency
+        const results = [
+          {check:"LOGIN", ok:true, latency: Math.floor(50+Math.random()*300)},
+          {check:"CHAT", ok: Math.random()>0.02, latency: Math.floor(20+Math.random()*200)},
+          {check:"OAUTH", ok:true, latency: Math.floor(30+Math.random()*200)},
+          {check:"AUDIT_WRITE", ok:true, latency: Math.floor(5+Math.random()*40)}
+        ];
+        // record as audit synthetic_result
+        this._audit("system","synthetic", { results });
+        return results;
+      }
+    }
+
+    const Server = new FakeServer();
+
+    /* ---------------- Client Session + token rotation ---------------- */
+    let Session = JSON.parse(localStorage.getItem(LS_SESSION) || "null") || { access:null, refresh:null, user:null, exp:0 };
+
+    function saveSession(){ localStorage.setItem(LS_SESSION, JSON.stringify(Session)); updateSessionUI(); }
+
+    function signOut(){
+      Session = { access:null, refresh:null, user:null, exp:0 };
+      saveSession();
+      updateSessionUI();
+      logAuditLocal("signed_out");
+    }
+
+    function updateSessionUI(){
+      const s = Session;
+      document.getElementById("authStatus").textContent = s.user ? ("Signed in: "+s.user.display) : "Not signed in";
+      document.getElementById("sessionInfo").textContent = s.user ? `id:${s.user.id} roles:${(s.user.roles||[]).join(",")}` : "—";
+      document.getElementById("userBadge").textContent = s.user ? s.user.display + (s.user.roles && s.user.roles.includes("ADMIN") ? " • admin":"") : "guest";
+      document.getElementById("authControls").innerHTML = s.user ? `<button id="signOutBtn" class="pill">Sign out</button>` : `<button id="showLogin" class="btn" style="width:100%">Sign in / Register</button>`;
+      const el = document.getElementById("showLogin");
+      if(el) el.addEventListener("click", ()=>openAuthModal());
+      const signOutBtn = document.getElementById("signOutBtn");
+      if(signOutBtn) signOutBtn.addEventListener("click", ()=>{ if(confirm("Sign out?")) signOut(); });
+    }
+
+    // Auto-refresh logic: try refresh when access expired
+    async function ensureAccess(){
+      if(!Session.access) throw new Error("not signed");
+      if(Date.now() < Session.exp - 5000) return Session.access; // ok
+      // attempt refresh
+      try {
+        const tk = Server.refreshToken(Session.refresh);
+        Session.access = tk.access; Session.refresh = tk.refresh; Session.exp = tk.accessExp;
+        saveSession();
+        logAuditLocal("refreshed_token");
+        return Session.access;
+      } catch (err) {
+        // fallback sign out
+        signOut();
+        throw new Error("Session expired");
+      }
+    }
+
+    /* ---------------- UI Wiring (tabs) ---------------- */
+    document.querySelectorAll(".nav button").forEach(btn=>{
+      btn.addEventListener("click", ()=> openTab(btn.dataset.tab));
+    });
+    function openTab(tab){
+      document.querySelectorAll(".tabcontent").forEach(s=>s.style.display="none");
+      document.getElementById(tab).style.display="block";
+      document.getElementById("currentTab").textContent = tab.charAt(0).toUpperCase()+tab.slice(1);
+    }
+    document.getElementById("goChat").addEventListener("click", ()=> openTab("chat"));
+    document.getElementById("goTV").addEventListener("click", ()=> openTab("tv"));
+
+    /* ---------------- Auth Modal Wiring ---------------- */
+    const authModal = document.getElementById("authModal");
+    document.getElementById("showLogin").addEventListener("click", openAuthModal);
+    document.getElementById("closeAuth").addEventListener("click", ()=>authModal.style.display="none");
+
+    function openAuthModal(){
+      document.getElementById("authModalTitle").textContent = "Sign in or Register";
+      document.getElementById("authMsg").textContent = "";
+      authModal.style.display = "block";
+    }
+
+    document.getElementById("registerBtn").addEventListener("click", ()=>{
+      const email = document.getElementById("emailInput").value.trim();
+      const pass = document.getElementById("passInput").value.trim();
+      const role = document.getElementById("roleSelect").value;
+      if(!email||!pass) return alert("email+password required");
+      try {
+        const { user } = Server.register({email,password:pass,role,display: email.split("@")[0]});
+        document.getElementById("authMsg").textContent = "Registered — now sign in";
+      } catch (err) { document.getElementById("authMsg").textContent = "Error: "+err.message }
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", ()=>{
+      const email = document.getElementById("emailInput").value.trim();
+      const pass = document.getElementById("passInput").value.trim();
+      if(!email||!pass) return alert("email+password required");
+      try {
+        const res = Server.login({email,password:pass});
+        Session = { access: res.token.access, refresh: res.token.refresh, user:res.user, exp: res.token.accessExp };
+        saveSession();
+        authModal.style.display = "none";
+        logAuditLocal("signed_in");
+      } catch (err) {
+        document.getElementById("authMsg").textContent = "Error: "+err.message;
+      }
+    });
+
+    // OAuth simulated
+    document.getElementById("oauthGoogle").addEventListener("click", ()=> oauthSign("google"));
+    document.getElementById("oauthFacebook").addEventListener("click", ()=> oauthSign("facebook"));
+    document.getElementById("oauthLine").addEventListener("click", ()=> oauthSign("line"));
+
+    function oauthSign(provider){
+      const fakeToken = provider + "-" + Math.random().toString(36).slice(2,8);
+      const res = Server.oauthLogin({provider, tokenFake: fakeToken});
+      Session = { access: res.token.access, refresh: res.token.refresh, user:res.user, exp: res.token.accessExp };
+      saveSession();
+      authModal.style.display = "none";
+      logAuditLocal("oauth_signin:"+provider);
+    }
+
+    /* ---------------- Chat UI + Socket simulation ---------------- */
+    let currentRoom = null;
+
+    function renderRooms(){
+      const sel = document.getElementById("roomSelect");
+      sel.innerHTML = "";
+      Server.listRooms().forEach(r=>{
+        const opt = document.createElement("option"); opt.value = r.id; opt.textContent = r.name + (r.premium? " (premium)":"");
+        sel.appendChild(opt);
+      });
+    }
+
+    document.getElementById("joinRoomBtn").addEventListener("click", ()=>{
+      if(!Session.user) return alert("Sign in first");
+      const roomId = document.getElementById("roomSelect").value;
+      // premium gate
+      const room = Server.rooms[roomId];
+      if(room.premium && !(Session.user.roles||[]).includes("PREMIUM") && !(Session.user.roles||[]).includes("ADMIN")){
+        return alert("Premium channel: upgrade to PREMIUM to join");
+      }
+      try {
+        Server.joinRoom(roomId, Session.user.id);
+        currentRoom = roomId;
+        document.getElementById("roomStatus").textContent = "In room: "+room.name;
+        renderRoomMessages(roomId);
+        renderRoomUsers(roomId);
+      } catch (err) { alert("Join failed: "+err.message) }
+    });
+
+    document.getElementById("leaveRoomBtn").addEventListener("click", ()=>{
+      if(currentRoom && Session.user) Server.leaveRoom(currentRoom, Session.user.id);
+      currentRoom = null; document.getElementById("roomStatus").textContent = "Not in room"; document.getElementById("chatWindow").innerHTML="";
+    });
+
+    document.getElementById("sendMsgBtn").addEventListener("click", async ()=>{
+      const text = document.getElementById("messageInput").value.trim(); if(!text) return;
+      try {
+        await ensureAccess();
+        const msg = Server.sendMessage(currentRoom, Session.user.id, text);
+        appendMessage(msg, Session.user);
+        document.getElementById("messageInput").value = "";
+      } catch (err) { alert("Send failed: "+err.message) }
+    });
+
+    // listen BroadcastChannel messages
+    try {
+      const bc = new BroadcastChannel("demo-chat");
+      bc.onmessage = (ev) => {
+        const data = ev.data;
+        if(data?.type === "message") {
+          // if in same room show
+          if(currentRoom === data.roomId){
+            const u = Server.users.find(x=>x.id===data.msg.userId) || {display:data.msg.userId};
+            appendMessage(data.msg, u);
+          }
+        }
+      }
+    } catch(e){ console.warn("BC not available", e) }
+
+    function renderRoomMessages(roomId){
+      const msgs = Server.getMessages(roomId, 200);
+      const w = document.getElementById("chatWindow"); w.innerHTML = "";
+      msgs.forEach(m=>{
+        const u = Server.users.find(x=>x.id===m.userId) || {display:m.userId};
+        appendMessage(m, u);
+      });
+      w.scrollTop = w.scrollHeight;
+    }
+
+    function appendMessage(m, user){
+      const w = document.getElementById("chatWindow");
+      const div = document.createElement("div");
+      div.className = "message "+(Session.user && Session.user.id === m.userId ? "me":"");
+      div.innerHTML = `<div class="message meta"><strong>${escapeHtml(user.display||user.email||user.id)}</strong> <span class="muted">${m.time}</span> ${(user.roles && user.roles.includes("ADMIN"))?'<span class="admin-badge">ADMIN</span>':''}</div>
+        <div>${escapeHtml(m.text)}</div>`;
+      w.appendChild(div);
+      w.scrollTop = w.scrollHeight;
+    }
+
+    function renderRoomUsers(roomId){
+      const users = Server.rooms[roomId].users || [];
+      const el = document.getElementById("roomUsers"); el.innerHTML = "";
+      users.forEach(uid => {
+        const u = Server.users.find(x=>x.id===uid) || {display:uid};
+        const row = document.createElement("div"); row.className="user-row";
+        row.innerHTML = `<div>${escapeHtml(u.display)} <span class="small muted">(${(u.roles||[]).join(",")})</span></div>
+          <div><button class="pill" data-uid="${u.id}">PM</button></div>`;
+        el.appendChild(row);
+      });
+    }
+
+    // Moderation buttons
+    document.getElementById("muteBtn").addEventListener("click", ()=>{
+      const tgt = document.getElementById("targetUser").value.trim();
+      if(!tgt) return alert("target required");
+      const u = Server.users.find(x=>x.display===tgt || x.email===tgt || x.id===tgt);
+      if(!u) return alert("user not found");
+      // For demo, mute = record audit only and simulate client-side ignore (not implemented fully)
+      Server._audit(Session.user?Session.user.id:"system","mute",{target:u.id,room:currentRoom});
+      alert("User muted (simulated): "+u.display);
+    });
+    document.getElementById("banBtn").addEventListener("click", ()=>{
+      const tgt = document.getElementById("targetUser").value.trim(); if(!tgt) return alert("target required");
+      const u = Server.users.find(x=>x.display===tgt || x.email===tgt || x.id===tgt); if(!u) return alert("user not found");
+      Server.banUser(currentRoom, u.id);
+      renderRoomUsers(currentRoom);
+      appendSystemMessage(`${u.display} was banned from room`);
+    });
+    document.getElementById("unbanBtn").addEventListener("click", ()=>{
+      const tgt = document.getElementById("targetUser").value.trim(); if(!tgt) return alert("target required");
+      const u = Server.users.find(x=>x.display===tgt || x.email===tgt || x.id===tgt); if(!u) return alert("user not found");
+      Server.unbanUser(currentRoom, u.id);
+      appendSystemMessage(`${u.display} was unbanned`);
+    });
+
+    function appendSystemMessage(text){
+      const w = document.getElementById("chatWindow");
+      const div = document.createElement("div"); div.className="message"; div.innerHTML = `<div class="small muted">${nowISO()} • ${escapeHtml(text)}</div>`; w.appendChild(div); w.scrollTop = w.scrollHeight;
+    }
+
+    function logAuditLocal(act){
+      Server._audit(Session.user?Session.user.id:"anon", act, {});
+      renderAudit();
+    }
+
+    function renderAudit(){
+      const logs = Server.getAudit();
+      const el = document.getElementById("auditLog");
+      el.innerHTML = logs.slice(0,200).map(l=>`${l.time} • ${escapeHtml(String(l.actor))} • ${escapeHtml(l.action)} • ${escapeHtml(JSON.stringify(l.meta||{}))}`).join("\n");
+    }
+
+    document.getElementById("exportAuditCSV").addEventListener("click", ()=>{
+      const rows = ["time,actor,action,meta"].concat(Server.getAudit().map(r=>`"${r.time}","${r.actor}","${r.action}","${JSON.stringify(r.meta).replace(/"/g,'""')}"`));
+      const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "audit.csv"; a.click();
+    });
+
+    /* ---------------- TV / Streaming UI ---------------- */
+    const defaultChannels = [
+      { id:"ch1", name:"Public Channel", premium:false, url:"https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" },
+      { id:"ch2", name:"Premium Channel", premium:true, url:"https://demo-assets.netlify.app/video/tears-of-steel-480p.mp4" },
+      // HLS example (may not play due to CORS); demo attempts with hls.js
+      { id:"ch3", name:"HLS Example", premium:false, url:"https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
+    ];
+    let playlist = JSON.parse(localStorage.getItem("demo:playlist_v1")||"null") || [ defaultChannels[0], defaultChannels[1] ];
+    let currentIndex = 0;
+
+    function renderChannels(){
+      const el = document.getElementById("channelList"); el.innerHTML="";
+      defaultChannels.forEach(ch=>{
+        const row = document.createElement("div"); row.className="user-row";
+        row.innerHTML = `<div><strong>${escapeHtml(ch.name)}</strong> ${ch.premium?'<span class="pill">premium</span>':''}</div>
+          <div><button class="pill" data-ch="${ch.id}">Play</button> <button class="pill" data-add="${ch.id}">+Add</button></div>`;
+        el.appendChild(row);
+      });
+      // attach handlers
+      el.querySelectorAll("button[data-ch]").forEach(btn=>{
+        btn.addEventListener("click", ()=> {
+          const id = btn.dataset.ch;
+          const ch = defaultChannels.find(x=>x.id===id);
+          playChannel(ch);
+        });
+      });
+      el.querySelectorAll("button[data-add]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.dataset.add; const ch = defaultChannels.find(x=>x.id===id);
+          playlist.push(ch); localStorage.setItem("demo:playlist_v1", JSON.stringify(playlist)); renderPlaylist();
+        });
+      });
+      renderPlaylist();
+    }
+
+    function renderPlaylist(){
+      const el = document.getElementById("playlist"); el.innerHTML="";
+      playlist.forEach((p,i)=>{
+        const div = document.createElement("div"); div.className="user-row";
+        div.innerHTML = `<div>${i+1}. ${escapeHtml(p.name)}</div><div><button class="pill" data-idx="${i}">Play</button></div>`;
+        el.appendChild(div);
+      });
+      el.querySelectorAll("button[data-idx]").forEach(b=> b.addEventListener("click", ()=> {
+        currentIndex = Number(b.dataset.idx); playChannel(playlist[currentIndex]);
+      }));
+    }
+
+    async function playChannel(ch){
+      if(ch.premium && !(Session.user&&((Session.user.roles||[]).includes("PREMIUM")|| (Session.user.roles||[]).includes("ADMIN")))) {
+        return alert("This channel is premium. Upgrade to PREMIUM or login as premium user.");
+      }
+      const vid = document.getElementById("tvPlayer");
+      // HLS handling
+      if(ch.url.endsWith(".m3u8") && Hls.isSupported()){
+        try {
+          if(window._hls) { window._hls.destroy(); window._hls=null; }
+          const hls = new Hls();
+          hls.loadSource(ch.url);
+          hls.attachMedia(vid);
+          window._hls = hls;
+        } catch(e){ vid.src = ch.url; }
+      } else {
+        if(window._hls){ window._hls.destroy(); window._hls=null; }
+        vid.src = ch.url;
+      }
+      vid.play().catch(()=>{});
+      appendOpsLog(`Playing ${ch.name}`);
+    }
+
+    document.getElementById("playBtn").addEventListener("click", ()=> document.getElementById("tvPlayer").play());
+    document.getElementById("prevBtn").addEventListener("click", ()=> { currentIndex = Math.max(0,currentIndex-1); playChannel(playlist[currentIndex]); });
+    document.getElementById("nextBtn").addEventListener("click", ()=> { currentIndex = Math.min(playlist.length-1,currentIndex+1); playChannel(playlist[currentIndex]); });
+
+    /* ---------------- Admin Panel wiring ---------------- */
+    function renderUsers(){
+      const el = document.getElementById("usersList"); el.innerHTML = "";
+      Server.listUsers().forEach(u=>{
+        const row = document.createElement("div"); row.className="user-row";
+        row.innerHTML = `<div><strong>${escapeHtml(u.display)}</strong> <div class="muted">${escapeHtml(u.email)} • ${escapeHtml(u.id)}</div></div>
+          <div>
+            <select data-uid="${u.id}" style="margin-right:6px">${["USER","PREMIUM","ADMIN"].map(r=>`<option value="${r}" ${ (u.roles||[]).includes(r) ? "selected":""}>${r}</option>`).join("")}</select>
+            <button class="pill" data-del="${u.id}">Remove</button>
+          </div>`;
+        el.appendChild(row);
+      });
+      // change handlers
+      el.querySelectorAll("select[data-uid]").forEach(sel=>{
+        sel.addEventListener("change", ()=>{
+          const id = sel.dataset.uid; const roles = [sel.value];
+          Server.setUserRoles(id, roles); renderUsers(); renderModerationStats();
+        })
+      });
+      el.querySelectorAll("button[data-del]").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const id = b.dataset.del;
+          if(!confirm("Remove user from demo?")) return;
+          // removal for demo: mark roles empty
+          Server.setUserRoles(id, []);
+          renderUsers();
+        })
+      });
+    }
+
+    function renderModerationStats(){
+      const s = document.getElementById("moderationStats");
+      const bans = Object.keys(Server.bans).reduce((acc,room)=> acc + Object.keys(Server.bans[room]||{}).length, 0);
+      s.textContent = `rooms: ${Object.keys(Server.rooms).length} • banned entries: ${bans} • audit events: ${Server.getAudit().length}`;
+    }
+
+    document.getElementById("exportAuditBtn").addEventListener("click", ()=>{
+      const rows = ["time,actor,action,meta"].concat(Server.getAudit().map(r=>`"${r.time}","${r.actor}","${r.action}","${JSON.stringify(r.meta).replace(/"/g,'""')}"`));
+      const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "audit_export.csv"; a.click();
+    });
+
+    /* ---------------- Ops / Monitoring ---------------- */
+    const syntheticLogEl = document.getElementById("syntheticLog");
+    const metricCtx = document.getElementById("metricChart").getContext("2d");
+    const metricData = { labels: [], datasets: [{ label:"synthetic_latency_ms", data:[], borderColor:"#50fa7b", backgroundColor:"rgba(80,250,123,0.08)"}] };
+    const metricChart = new Chart(metricCtx, { type:"line", data: metricData, options:{ responsive:true, scales:{ y:{ beginAtZero:true } } } });
+
+    function runSyntheticOnce(){
+      const res = Server.runSyntheticChecks();
+      const time = nowISO();
+      syntheticLogEl.innerHTML = `${time} • ${JSON.stringify(res)}\n` + syntheticLogEl.innerHTML;
+      // update metric with average latency
+      const avg = Math.round(res.reduce((s,r)=>s+r.latency,0)/res.length);
+      metricData.labels.push(time.split("T")[1].split(".")[0]);
+      metricData.datasets[0].data.push(avg);
+      if(metricData.labels.length>30){ metricData.labels.shift(); metricData.datasets[0].data.shift(); }
+      metricChart.update();
+      appendOpsLog(`synthetic avg latency ${avg}ms`);
+    }
+
+    // health endpoint simulation
+    function updateHealth(){
+      const ok = true;
+      document.getElementById("healthStatus").innerHTML = `<div class="muted">basic: ${ok?'<span style="color:var(--accent)">ok</span>':'<span style="color:#ff5252">fail</span>'}</div>`;
+    }
+
+    function appendOpsLog(txt){
+      const el = document.getElementById("syntheticLog");
+      el.innerHTML = `${nowISO()} • ${txt}\n` + el.innerHTML;
+    }
+
+    /* ---------------- Frameworks API generator (client) ---------------- */
+    document.getElementById("fwGenerate").addEventListener("click", async ()=>{
+      const cfg = document.getElementById("fwConfig").value;
+      const zip = new JSZip();
+      zip.file(".netlify/v1/config.json", cfg);
+      zip.file(".netlify/v1/skew-protection.json", JSON.stringify({ patterns: ["/api/.*"], sources: [{type:"header",name:"x-skew-token"}] }, null, 2));
+      zip.file(".netlify/v1/edge-functions/my-framework-api-route.ts", `export default () => new Response("ok");\nexport const config = { path: "/*" };`);
+      const content = await zip.generateAsync({type:"blob"});
+      const a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = "netlify-v1.zip"; a.click();
+    });
+    document.getElementById("fwDownloadPayload").addEventListener("click", ()=>{
+      const payload = { config: JSON.parseSafe(document.getElementById("fwConfig").value) };
+      const b = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"}); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "payload.json"; a.click();
+    });
+
+    /* ---------------- Utilities ---------------- */
+    function escapeHtml(s){ return (s||"").toString().replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+    // safe parse
+    JSON.parseSafe = function(s){ try{return JSON.parse(s)}catch(e){return null} }
+
+    /* ---------------- Init on load ---------------- */
+    function init(){
+      renderRooms();
+      renderChannels();
+      renderUsers();
+      renderModerationStats();
+      renderAudit();
+      updateHealth();
+      updateSessionUI();
+
+      // synthetic checks every 10s (demo instead of 1m)
+      runSyntheticOnce();
+      setInterval(runSyntheticOnce, 10*1000);
+
+      // replay last message history as periodic simulated events (for lively demo)
+      setInterval(()=> {
+        // occasionally emit a system message
+        const rids = Object.keys(Server.rooms);
+        const r = rids[Math.floor(Math.random()*rids.length)];
+        const msg = Server.sendMessage(r, Server.users[Math.floor(Math.random()*Server.users.length)].id, "auto message "+Math.floor(Math.random()*100));
+        // if currently in that room, append
+        if(currentRoom === r) {
+          const u = Server.users.find(x=>x.id===msg.userId) || {display:msg.userId};
+          appendMessage(msg, u);
+          renderRoomUsers(r);
+        }
+      }, 25*1000);
+
+      // Open Home by default
+      openTab("home");
+    }
+
+    window.addEventListener("load", init);
+
+    /* ---------------- Expose debug / helpers to window for dev ---------------- */
+    window._Server = Server;
+    window._Session = Session;
+    window.openTab = openTab;
+    window.signOut = signOut;
+  </script>
+</body>
+</html>
