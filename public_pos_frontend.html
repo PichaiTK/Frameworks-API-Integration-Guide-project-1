@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>POS — Demo Frontend</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial;background:#f5f7fb;color:#0b1220;padding:18px}
+    .wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:18px}
+    .card{background:#fff;border-radius:8px;padding:12px;box-shadow:0 6px 18px rgba(11,17,32,0.06)}
+    h2{margin:0 0 8px}
+    .products{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .product{border:1px solid #eef2f6;padding:8px;border-radius:6px;display:flex;justify-content:space-between;align-items:center}
+    .cart{display:flex;flex-direction:column;gap:8px}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:6px;border-bottom:1px solid #f1f5f9}
+    .total{font-weight:700}
+    input,select,button{padding:8px;border-radius:6px;border:1px solid #e6eef8}
+    .btn-primary{background:#0b76ff;color:#fff;border:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>Products</h2>
+      <div style="margin-bottom:8px">
+        <input id="filter" placeholder="Search product name or sku" style="width:60%;"/>
+        <button id="reload">Reload</button>
+      </div>
+      <div id="products" class="products"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cart</h2>
+      <div class="cart">
+        <div>
+          <table>
+            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead>
+            <tbody id="cartBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="muted">Subtotal</div><div id="subtotal">0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="muted">Tax</div><div id="tax">0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="total">Total</div><div id="total">0</div>
+        </div>
+
+        <div>
+          <h4>Customer</h4>
+          <input id="custName" placeholder="Customer name" style="width:100%;margin-bottom:6px"/>
+          <input id="custPhone" placeholder="Phone or email" style="width:100%"/>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="checkoutBtn" class="btn-primary">Checkout</button>
+          <button id="clearCart">Clear</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <h4>Admin / Tools</h4>
+          <button id="openReports">Open Sales Report (analytics)</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="grid-column:1 / -1">
+      <div class="card">
+        <h2>Notifications & Logs</h2>
+        <pre id="logs" style="height:120px;overflow:auto;margin:0;background:#f8fafc;padding:8px;border-radius:6px"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Minimal frontend using REST API endpoints (assumes server at same origin)
+    async function api(path, opts) {
+      const res = await fetch(path, {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        ...opts,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) return res.json();
+      return res.text();
+    }
+
+    // state
+    let products = [];
+    let cart = [];
+
+    function centsToCurrency(c) { return (c/100).toFixed(2); }
+    function currencyToCents(s) { return Math.round(Number(s) * 100); }
+
+    function log(msg) {
+      const el = document.getElementById("logs");
+      el.textContent = new Date().toISOString() + " • " + msg + "\n" + el.textContent;
+    }
+
+    async function loadProducts() {
+      try {
+        products = await api("/api/products");
+        renderProducts();
+        log("Products loaded: " + products.length);
+      } catch (err) { log("Load products error: " + err.message) }
+    }
+
+    function renderProducts(filter="") {
+      const c = document.getElementById("products"); c.innerHTML = "";
+      const list = products.filter(p => (p.name + p.sku).toLowerCase().includes(filter.toLowerCase()));
+      list.forEach(p => {
+        const el = document.createElement("div"); el.className = "product";
+        el.innerHTML = `<div>
+          <div style="font-weight:700">${p.name} <small style="color:#64748b">(${p.sku})</small></div>
+          <div style="color:#64748b">${p.description || ""}</div>
+          <div style="color:#334155">Stock: ${p.stock}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700">${centsToCurrency(p.price)}</div>
+          <div style="margin-top:8px">
+            <input type="number" min="1" value="1" style="width:64px" id="qty_${p.id}" />
+            <button data-id="${p.id}" class="addBtn">Add</button>
+          </div>
+        </div>`;
+        c.appendChild(el);
+      });
+      document.querySelectorAll(".addBtn").forEach(b=>{
+        b.addEventListener("click", (e) => {
+          const id = b.dataset.id;
+          const q = Number(document.getElementById("qty_"+id).value) || 1;
+          addToCart(id, q);
+        });
+      });
+    }
+
+    function addToCart(productId, qty=1) {
+      const p = products.find(x=>x.id===productId); if(!p) { log("Product not found"); return; }
+      const existing = cart.find(i=>i.productId===productId);
+      if (existing) existing.quantity += qty; else cart.push({ productId, name:p.name, unitPrice:p.price, quantity:qty, taxPercent: p.taxPercent||0 });
+      renderCart();
+      log(`Added ${qty}x ${p.name}`);
+    }
+
+    function renderCart() {
+      const tbody = document.getElementById("cartBody"); tbody.innerHTML = "";
+      let subtotal = 0; let tax = 0;
+      cart.forEach((it, idx) => {
+        const tr = document.createElement("tr");
+        const line = it.unitPrice * it.quantity;
+        subtotal += line;
+        tax += Math.round(line * ((it.taxPercent||0)/100));
+        tr.innerHTML = `<td>${it.name}</td><td><input type="number" min="1" value="${it.quantity}" data-idx="${idx}" class="qtyInput" style="width:64px"/></td><td>${centsToCurrency(it.unitPrice)}</td><td><button data-idx="${idx}" class="rm">Remove</button></td>`;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll(".qtyInput").forEach(inp=> inp.addEventListener("change", (e)=> {
+        const idx = Number(inp.dataset.idx); const v = Number(inp.value)||1; cart[idx].quantity = v; renderCart();
+      }));
+      document.querySelectorAll(".rm").forEach(b=> b.addEventListener("click", ()=> {
+        const idx = Number(b.dataset.idx); cart.splice(idx,1); renderCart();
+      }));
+      const total = subtotal + tax;
+      document.getElementById("subtotal").textContent = centsToCurrency(subtotal);
+      document.getElementById("tax").textContent = centsToCurrency(tax);
+      document.getElementById("total").textContent = centsToCurrency(total);
+    }
+
+    document.getElementById("checkoutBtn").addEventListener("click", async ()=>{
+      if (!cart.length) return alert("Cart empty");
+      const custName = document.getElementById("custName").value.trim();
+      const custPhone = document.getElementById("custPhone").value.trim();
+      const customer = custName || custPhone ? { name: custName || undefined, phone: custPhone || undefined } : null;
+
+      // Build order payload
+      const items = cart.map(i => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice, taxPercent: i.taxPercent||0 }));
+      const payload = { customer, items, payments: [{ method: "cash", amount: Number(document.getElementById("total").textContent) * 100 || 0 }] };
+
+      try {
+        const res = await api("/api/orders", { method: "POST", body: JSON.stringify(payload) });
+        log("Order created: " + res.id);
+        // open receipt
+        const receiptHtml = await api(`/api/orders/${res.id}/receipt`);
+        const win = window.open("", "_blank");
+        win.document.write(receiptHtml);
+        cart = [];
+        renderCart();
+        await loadProducts(); // refresh stock numbers
+      } catch (err) { log("Checkout error: " + err.message) }
+    });
+
+    document.getElementById("clearCart").addEventListener("click", ()=>{ cart=[]; renderCart(); });
+
+    document.getElementById("reload").addEventListener("click", loadProducts);
+    document.getElementById("filter").addEventListener("input",(e)=> renderProducts(e.target.value));
+
+    document.getElementById("openReports").addEventListener("click", async ()=>{
+      const data = await api("/api/analytics/top-products?limit=20");
+      alert("Top products (name:units):\n" + data.map(d=>d.name+":"+d.units).join("\n"));
+    });
+
+    // init
+    loadProducts();
+    renderCart();
+  </script>
+</body>
+</html>
