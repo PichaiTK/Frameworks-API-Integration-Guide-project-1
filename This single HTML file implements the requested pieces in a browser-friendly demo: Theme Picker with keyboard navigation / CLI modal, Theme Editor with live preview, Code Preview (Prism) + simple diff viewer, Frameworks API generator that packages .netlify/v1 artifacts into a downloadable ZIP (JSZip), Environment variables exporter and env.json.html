@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Theme & Frameworks API Playground — Demo</title>
+
+  <!-- Prism for code highlighting -->
+  <link href="https://unpkg.com/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+  <script src="https://unpkg.com/prismjs@1.29.0/prism.js"></script>
+  <script src="https://unpkg.com/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+
+  <!-- js-yaml for YAML export/import -->
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+
+  <!-- JSZip to package generated .netlify/v1 files -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.0/dist/jszip.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #0f1720;
+      --panel-bg: #0b1220;
+      --card-bg: #0b1220;
+      --text: #e6eef8;
+      --muted: #9fb0c8;
+      --accent: #50fa7b;
+      --border: #334155;
+      --gap: 14px;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{background:linear-gradient(180deg,#071028 0%, #071528 60%);color:var(--text);padding:20px;box-sizing:border-box;}
+    h1{margin:0 0 6px 0;font-size:20px}
+    .app{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:auto;gap:var(--gap);max-width:1200px;margin:0 auto;}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));border:1px solid var(--border);border-radius:8px;padding:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .card h2{font-size:16px;margin:0 0 10px 0}
+    .row{display:flex;gap:10px;align-items:center}
+    .theme-list{max-height:220px;overflow:auto;padding:6px;border-radius:6px;border:1px dashed rgba(255,255,255,0.03)}
+    .theme-item{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer}
+    .theme-item:hover{background:rgba(255,255,255,0.02)}
+    .dot{width:12px;height:12px;border-radius:50%}
+    .controls{display:flex;gap:8px;margin-top:8px}
+    button{background:transparent;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;cursor:pointer}
+    input[type="file"]{display:none}
+    .small{font-size:13px;color:var(--muted)}
+    .flex-col{display:flex;flex-direction:column}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    textarea{width:100%;height:140px;background:transparent;color:var(--text);border:1px solid var(--border);padding:8px;border-radius:6px;font-family:monospace}
+    .code-wrap{border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+    pre{margin:0;padding:12px;font-size:13px;line-height:1.45}
+    .preview{padding:12px;border-radius:6px;border:1px solid var(--border)}
+    .theme-editor label{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .theme-editor input[type="color"]{width:44px;height:28px;border:0;background:none;padding:0}
+    .bottom-row{grid-column:1 / -1;display:flex;justify-content:space-between;gap:12px}
+    .muted{color:var(--muted);font-size:13px}
+    .diff-line{white-space:pre-wrap;font-family:monospace;padding:4px 8px}
+    .diff-added{background:rgba(40,90,60,0.08);border-left:4px solid rgba(24,128,56,0.8)}
+    .diff-removed{background:rgba(150,30,30,0.06);border-left:4px solid rgba(217,37,37,0.8)}
+    .diff-context{}
+    .cli-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card-bg);border:1px solid var(--border);padding:16px;border-radius:8px;z-index:60;min-width:320px}
+    .kbd{background:#07192a;padding:4px 6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);font-family:monospace}
+    footer{grid-column:1 / -1;color:var(--muted);font-size:13px;margin-top:8px}
+    /* CSS variables for code preview mapped from theme */
+    .code-theme{
+      --code-bg: #fff;
+      --code-fg: #222;
+      --code-keyword: #1a73e8;
+      --code-fn: #9334e6;
+      --code-var: #202124;
+      --code-number: #188038;
+      --code-string: #d93025;
+      --code-comment: #5f6368;
+    }
+    .code-theme pre{background:var(--code-bg);color:var(--code-fg)}
+    .code-theme .token.keyword { color: var(--code-keyword) !important; font-weight:600 }
+    .code-theme .token.function { color: var(--code-fn) !important }
+    .code-theme .token.variable { color: var(--code-var) !important }
+    .code-theme .token.number { color: var(--code-number) !important }
+    .code-theme .token.string { color: var(--code-string) !important }
+    .code-theme .token.comment { color: var(--code-comment) !important; font-style:italic }
+    /* responsive */
+    @media (max-width:980px){
+      .app{grid-template-columns:1fr;padding:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Section 1: Theme Picker (like VS Code) -->
+    <section class="card" id="themePicker">
+      <h2>Theme Picker</h2>
+      <div class="row">
+        <div style="flex:1">
+          <div class="theme-list" id="themeList" aria-label="Theme list"></div>
+        </div>
+        <div style="width:220px">
+          <div class="small muted">Active:</div>
+          <div id="activeThemeName" style="font-weight:600;margin-top:6px"></div>
+          <div style="margin-top:10px" class="muted">Keyboard: <span class="kbd">↑</span> <span class="kbd">↓</span> Select <span class="kbd">Enter</span></div>
+          <div style="margin-top:10px" class="controls">
+            <button id="openCliBtn">CLI Selector</button>
+            <button id="exportThemesBtn">Export themes (JSON)</button>
+            <label style="display:inline-block">
+              <input id="importThemesInput" type="file" accept=".json" />
+              <button id="importThemesBtn">Import themes</button>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Theme Editor + Live Preview + Code Preview -->
+    <section class="card" id="themeEditorCard">
+      <h2>Theme Editor & Live Preview</h2>
+      <div class="grid-2">
+        <div>
+          <div class="theme-editor" id="themeEditor"></div>
+          <div style="margin-top:8px" class="controls">
+            <button id="saveCustomThemeBtn">Save / Apply</button>
+            <button id="exportThemeJSON">Export JSON</button>
+            <button id="exportThemeYAML">Export YAML</button>
+          </div>
+        </div>
+        <div>
+          <div class="preview" id="livePreview">
+            <h3 style="margin-top:0">Live UI Preview</h3>
+            <p id="previewText">This is a preview area. The theme updates colors used for syntax preview and accents.</p>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button id="accentBtn" style="padding:8px 10px;border-radius:6px">Accent</button>
+              <button style="padding:8px 10px;border-radius:6px">Secondary</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <h4 style="margin:8px 0">Code Preview</h4>
+            <div class="code-wrap code-theme" id="codePreviewWrap">
+              <pre id="codePreview" class="language-typescript"></pre>
+            </div>
+            <div style="margin-top:8px">
+              <h4 style="margin:8px 0">Diff Preview</h4>
+              <div id="diffPreview" class="code-wrap" style="padding:8px;max-height:220px;overflow:auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Frameworks API Generator UI -->
+    <section class="card" id="frameworksPanel">
+      <h2>Frameworks API Generator (simulate .netlify/v1)</h2>
+      <div class="flex-col">
+        <label class="small muted">.netlify/v1/config.json</label>
+        <textarea id="fwConfig">{
+  "edge_functions": [
+    { "function": "auth", "path": "/admin" }
+  ],
+  "functions": {
+    "directory": "myfunctions/",
+    "included_files": ["**/*.ts"]
+  },
+  "headers": [
+    {
+      "for": "/*",
+      "values": { "X-Frame-Options": "DENY" }
+    }
+  ]
+}</textarea>
+
+        <label class="small muted" style="margin-top:8px">.netlify/v1/skew-protection.json</label>
+        <textarea id="fwSkew">{
+  "patterns": ["/api/.*", ".*\\.(png|jpg|jpeg|gif|webp|svg|js|css)$"],
+  "sources": [
+    { "type": "cookie", "name": "netlify-skew-token" },
+    { "type": "header", "name": "x-skew-token" }
+  ]
+}</textarea>
+
+        <label class="small muted" style="margin-top:8px">Import map (edge functions)</label>
+        <textarea id="fwImportMap">{
+  "html-rewriter": "https://ghuc.cc/worker-tools/html-rewriter/index.ts",
+  "utils/": "./nested/directory/utils"
+}</textarea>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="generateFilesBtn">Generate & Download .zip</button>
+          <button id="writeExampleEdgeBtn">Add example edge function</button>
+          <button id="downloadPayloadBtn">Download payload JSON</button>
+        </div>
+        <div id="fwStatus" class="muted" style="margin-top:8px">Files are generated in-memory then packaged to a ZIP for download (simulation).</div>
+      </div>
+    </section>
+
+    <!-- Section 4: Environment Variables Exporter / Guide -->
+    <section class="card" id="envPanel">
+      <h2>Environment Variables (Netlify) — Export / Generate</h2>
+      <div>
+        <p class="small muted">Define environment entries and export as .env or env.json (simulate scopes & contexts).</p>
+        <div class="grid-2">
+          <div>
+            <label class="small muted">Key</label>
+            <input id="envKey" placeholder="API_KEY" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);"/>
+          </div>
+          <div>
+            <label class="small muted">Value (production)</label>
+            <input id="envValueProd" placeholder="prod-secret" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);"/>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button id="addEnvBtn">Add entry</button>
+          <button id="exportEnvDotenv">Export .env (local)</button>
+          <button id="exportEnvJSON">Export env.json</button>
+        </div>
+
+        <div id="envList" style="margin-top:12px" class="muted">No entries yet.</div>
+
+        <h4 style="margin-top:14px">Guide (excerpt)</h4>
+        <div style="max-height:220px;overflow:auto;border:1px solid var(--border);padding:8px;border-radius:6px;background:rgba(255,255,255,0.01)">
+          <p class="small">Netlify environment variables have scopes and deploy-context values. This tool only simulates a small export for local use and build-time samples. Do NOT store secrets in repo files for production. Use Netlify UI / API for secrets.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div><strong>Demo:</strong> Theme system + Frameworks API generator — all client-side simulation.</div>
+        <div class="muted">Built for demo • PichaiTK</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- CLI Modal (hidden initially) -->
+  <div id="cliModal" class="cli-modal" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><strong>CLI Theme Selector</strong></div>
+      <div><button id="closeCli">Close</button></div>
+    </div>
+    <div style="margin-top:10px" class="muted">Use ↑↓ and Enter to apply theme</div>
+    <div id="cliList" style="margin-top:10px;max-height:240px;overflow:auto;border:1px solid var(--border);padding:8px;border-radius:6px"></div>
+  </div>
+
+  <script>
+    /*****************************************************************************
+     * Combined demo JavaScript
+     * - Theme model (based on user's spec)
+     * - Theme store (localStorage)
+     * - Theme editor, export/import JSON/YAML
+     * - Code preview (Prism) with theme mapping
+     * - Diff preview (simple LCS algorithm)
+     * - Frameworks API UI: generate in-memory files, zip and download (JSZip)
+     * - Env variables manager: store entries and export .env / env.json
+     *****************************************************************************/
+
+    // --------------- Theme model & default themes ---------------
+    /** Theme types simplified for browser usage */
+    const THEMES_DEFAULT = [
+      {
+        id: "google-light",
+        name: "Google Code Light",
+        mode: "light",
+        border: "#9aa4b2",
+        accent: "#00c853",
+        syntax: {
+          background: "#ffffff",
+          foreground: "#202124",
+          keyword: "#1a73e8",
+          function: "#9334e6",
+          variable: "#202124",
+          number: "#188038",
+          string: "#d93025",
+          comment: "#5f6368",
+        },
+        diff: { added: "#188038", removed: "#d93025", context: "#5f6368" }
+      },
+      {
+        id: "dracula-dark",
+        name: "Dracula Dark",
+        mode: "dark",
+        border: "#44475a",
+        accent: "#50fa7b",
+        syntax: {
+          background: "#282a36",
+          foreground: "#f8f8f2",
+          keyword: "#ff79c6",
+          function: "#8be9fd",
+          variable: "#f8f8f2",
+          number: "#bd93f9",
+          string: "#f1fa8c",
+          comment: "#6272a4"
+        },
+        diff: { added: "#50fa7b", removed: "#ff5555", context: "#6272a4" }
+      },
+      {
+        id: "my-custom",
+        name: "MyCustomTheme",
+        mode: "custom",
+        border: "#ffb300",
+        accent: "#ffb300",
+        syntax: {
+          background: "#0f0f14",
+          foreground: "#eaeaf0",
+          keyword: "#ffb300",
+          function: "#40c4ff",
+          variable: "#eaeaf0",
+          number: "#69f0ae",
+          string: "#ff5252",
+          comment: "#8c8ca1"
+        },
+        diff: { added: "#69f0ae", removed: "#ff5252", context: "#8c8ca1" }
+      }
+    ];
+
+    // Storage keys
+    const STORAGE_KEY_THEMES = "demo:themes";
+    const STORAGE_KEY_ACTIVE = "demo:activeTheme";
+    // Load or initialize
+    let THEMES = JSON.parse(localStorage.getItem(STORAGE_KEY_THEMES) || "null") || THEMES_DEFAULT.slice();
+    let activeThemeId = localStorage.getItem(STORAGE_KEY_ACTIVE) || THEMES[0].id;
+
+    function saveThemes() {
+      localStorage.setItem(STORAGE_KEY_THEMES, JSON.stringify(THEMES, null, 2));
+    }
+    function setActiveThemeId(id) {
+      activeThemeId = id;
+      localStorage.setItem(STORAGE_KEY_ACTIVE, id);
+      renderActive();
+      applyThemeToUI(getThemeById(id));
+    }
+    function getThemeById(id) {
+      const t = THEMES.find(x => x.id === id);
+      if (!t) throw new Error("Theme not found: " + id);
+      return t;
+    }
+
+    // --------------- UI Rendering (Theme Picker) ---------------
+    const themeListEl = document.getElementById("themeList");
+    const activeThemeNameEl = document.getElementById("activeThemeName");
+
+    function renderThemeList() {
+      themeListEl.innerHTML = "";
+      THEMES.forEach((t, i) => {
+        const item = document.createElement("div");
+        item.className = "theme-item";
+        item.tabIndex = 0;
+        item.dataset.id = t.id;
+        item.innerHTML = `<div class="dot" style="background:${t.accent};border:1px solid rgba(255,255,255,0.02)"></div>
+          <div style="flex:1">
+            <div style="font-weight:600">${t.name}</div>
+            <div class="small muted">${t.mode} • id: ${t.id}</div>
+          </div>
+          <div style="width:62px;display:flex;justify-content:flex-end;align-items:center">
+            ${t.id === activeThemeId ? '<span style="color:var(--accent)">●</span>' : ''}
+          </div>`;
+        item.addEventListener("click", () => {
+          setActiveThemeId(t.id);
+        });
+        themeListEl.appendChild(item);
+      });
+    }
+
+    // Keyboard CLI-like navigation
+    let cliIndex = 0;
+    document.addEventListener("keydown", (ev) => {
+      // Only when modal not visible, use up/down to change selection in list
+      if (document.getElementById("cliModal").style.display === "none") {
+        if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+          ev.preventDefault();
+          cliIndex += (ev.key === "ArrowDown") ? 1 : -1;
+          cliIndex = ((cliIndex % THEMES.length) + THEMES.length) % THEMES.length;
+          const id = THEMES[cliIndex].id;
+          highlightListSelection(cliIndex);
+        }
+        if (ev.key === "Enter") {
+          const id = THEMES[cliIndex].id;
+          setActiveThemeId(id);
+        }
+      }
+    });
+
+    function highlightListSelection(idx) {
+      const items = themeListEl.querySelectorAll(".theme-item");
+      items.forEach((el, i) => {
+        el.style.outline = i === idx ? "2px solid rgba(80,250,123,0.08)" : "none";
+      });
+      // Scroll into view
+      const el = items[idx];
+      if (el) el.scrollIntoView({ block: "nearest" });
+    }
+
+    // CLI modal
+    const openCliBtn = document.getElementById("openCliBtn");
+    const cliModal = document.getElementById("cliModal");
+    const cliList = document.getElementById("cliList");
+    const closeCli = document.getElementById("closeCli");
+    openCliBtn.addEventListener("click", () => {
+      cliModal.style.display = "block";
+      renderCliList();
+      cliIndex = THEMES.findIndex(t => t.id === activeThemeId) || 0;
+      highlightCliItem(cliIndex);
+    });
+    closeCli.addEventListener("click", () => cliModal.style.display = "none");
+    function renderCliList() {
+      cliList.innerHTML = "";
+      THEMES.forEach((t, i) => {
+        const row = document.createElement("div");
+        row.textContent = `${t.name} (${t.mode})`;
+        row.style.padding = "6px";
+        row.style.borderRadius = "6px";
+        row.style.cursor = "pointer";
+        row.addEventListener("click", () => {
+          setActiveThemeId(t.id);
+          cliModal.style.display = "none";
+        });
+        cliList.appendChild(row);
+      });
+      // keyboard nav inside modal
+      cliList.focus();
+    }
+    function highlightCliItem(i) {
+      const rows = cliList.children;
+      for (let r = 0; r < rows.length; r++) {
+        rows[r].style.background = r === i ? "rgba(80,250,123,0.06)" : "transparent";
+      }
+    }
+    // modal keyboard
+    document.addEventListener("keydown", (e) => {
+      if (cliModal.style.display === "block") {
+        if (e.key === "ArrowDown") { cliIndex = (cliIndex + 1) % THEMES.length; highlightCliItem(cliIndex); e.preventDefault() }
+        if (e.key === "ArrowUp") { cliIndex = (cliIndex - 1 + THEMES.length) % THEMES.length; highlightCliItem(cliIndex); e.preventDefault() }
+        if (e.key === "Enter") { setActiveThemeId(THEMES[cliIndex].id); cliModal.style.display = "none"; e.preventDefault() }
+        if (e.key === "Escape") { cliModal.style.display = "none"; e.preventDefault() }
+      }
+    });
+
+    // --------------- Theme Editor ---------------
+    const themeEditorEl = document.getElementById("themeEditor");
+    const livePreview = document.getElementById("livePreview");
+    const accentBtn = document.getElementById("accentBtn");
+    const codePreviewEl = document.getElementById("codePreview");
+    const codePreviewWrap = document.getElementById("codePreviewWrap");
+    const diffPreviewEl = document.getElementById("diffPreview");
+
+    let editingTheme = JSON.parse(JSON.stringify(getThemeById(activeThemeId))); // deep copy
+
+    function renderEditor(theme = editingTheme) {
+      themeEditorEl.innerHTML = "";
+      // name, id, mode
+      const top = document.createElement("div");
+      top.innerHTML = `
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="editName" placeholder="Name" style="flex:1;padding:8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text)" value="${escapeHtml(theme.name)}"/>
+          <input id="editId" placeholder="id" style="width:160px;padding:8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text)" value="${escapeHtml
