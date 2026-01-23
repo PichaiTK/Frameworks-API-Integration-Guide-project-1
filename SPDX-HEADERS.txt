@@ -1,0 +1,22 @@
+# Example SPDX license headers / file comment snippets
+# Add at top of each source file (JS / TS / PY) to make licensing explicit.
+
+# JavaScript / TypeScript (single-line comment)
+//
+// SPDX-FileCopyrightText: 2026 PichaiTK
+// SPDX-License-Identifier: MIT
+//
+
+# Or short single-line header
+// SPDX-License-Identifier: MIT
+
+# Python (hash comment)
+# SPDX-FileCopyrightText: 2026 PichaiTK
+# SPDX-License-Identifier: MIT
+
+# Shell / other script
+# SPDX-License-Identifier: MIT
+
+# Example for Apache-2.0
+# SPDX-FileCopyrightText: 2026 PichaiTK
+# SPDX-License-Identifier: Apache-2.0
