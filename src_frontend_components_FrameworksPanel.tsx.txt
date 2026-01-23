@@ -1,0 +1,101 @@
+import React, { useState } from "react";
+
+/**
+ * FrameworksPanel (React)
+ * A compact UI to edit Frameworks API payloads and POST them to a build-time / server endpoint.
+ *
+ * Note: Browsers cannot write to .netlify/... directly.
+ * Use this UI together with a backend route (/api/frameworks/generate)
+ * that calls the FrameworksApi helpers on the server side.
+ *
+ * This component is intentionally minimal and designed to be dropped into a React app.
+ */
+
+type NetlifyConfig = any;
+type SkewProtection = any;
+
+export function FrameworksPanel() {
+  const [config, setConfig] = useState<NetlifyConfig>({
+    edge_functions: [{ function: "auth", path: "/admin" }],
+    functions: { directory: "myfunctions/", included_files: ["**/*.ts"] },
+  });
+  const [skew, setSkew] = useState<SkewProtection>({
+    patterns: ["/api/.*"],
+    sources: [{ type: "cookie", name: "netlify-skew-token" }],
+  });
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function sendGenerate() {
+    setStatus("sending...");
+    try {
+      const res = await fetch("/api/frameworks/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config, skew }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setStatus("OK: generated on server");
+    } catch (err: any) {
+      setStatus("Error: " + err.message);
+    }
+  }
+
+  return (
+    <div style={{ padding: 12, maxWidth: 900 }}>
+      <h2>Frameworks API Generator</h2>
+
+      <section style={{ marginBottom: 12 }}>
+        <h3>.netlify/v1/config.json</h3>
+        <textarea
+          rows={8}
+          style={{ width: "100%", fontFamily: "monospace" }}
+          value={JSON.stringify(config, null, 2)}
+          onChange={(e) => {
+            try {
+              setConfig(JSON.parse(e.target.value));
+            } catch {
+              // ignore invalid json while typing
+              setConfig((s) => s);
+            }
+          }}
+        />
+      </section>
+
+      <section style={{ marginBottom: 12 }}>
+        <h3>.netlify/v1/skew-protection.json</h3>
+        <textarea
+          rows={6}
+          style={{ width: "100%", fontFamily: "monospace" }}
+          value={JSON.stringify(skew, null, 2)}
+          onChange={(e) => {
+            try {
+              setSkew(JSON.parse(e.target.value));
+            } catch {
+              setSkew((s) => s);
+            }
+          }}
+        />
+      </section>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={sendGenerate}>Generate files on server</button>
+        <button
+          onClick={() => {
+            const blob = new Blob([JSON.stringify({ config, skew }, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "frameworks-api-payload.json";
+            a.click();
+          }}
+        >
+          Download payload
+        </button>
+      </div>
+
+      <div style={{ marginTop: 8 }}>{status}</div>
+    </div>
+  );
+}
+
+export default FrameworksPanel;
