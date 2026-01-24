@@ -1,6 +1,6 @@
 # Frameworks-API-Integration-Guide-project-1
+
 [![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=deployment)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)
-[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=issues)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=issue_comment)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=fork)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=deployment)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)
 
 -------------
 
