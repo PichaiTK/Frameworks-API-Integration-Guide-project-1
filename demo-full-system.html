@@ -354,7 +354,7 @@
       // Auth
       register({email, password, role, display}) {
         if(this.users.find(u=>u.email===email)) throw new Error("Email exists");
-        const id = "u_" + Math.random().toString(36).slice(2,9);
+        const id = "u_" + this._secureRandomString(7);
         const user = { id, email, password, roles: [role||"USER"], display: display || email.split("@")[0] };
         this.users.push(user); this._saveAll();
         this._audit(user.id, "register", {email});
@@ -374,7 +374,7 @@
         const pseudoEmail = provider + "+" + (tokenFake||"user") + "@oauth.demo";
         let user = this.users.find(u=>u.email===pseudoEmail);
         if(!user){
-          user = { id: "u_"+Math.random().toString(36).slice(2,9), email: pseudoEmail, password: "", roles:["USER"], display: provider+" user" };
+          user = { id: "u_"+this._secureRandomString(7), email: pseudoEmail, password: "", roles:["USER"], display: provider+" user" };
           this.users.push(user);
         }
         this._saveAll();
@@ -383,11 +383,24 @@
         return { token: tk, user: this._safeUser(user) };
       }
 
+      _secureRandomString(length) {
+        const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
+        const bytes = new Uint8Array(length);
+        // Use cryptographically secure random values where available
+        (window.crypto || window.msCrypto).getRandomValues(bytes);
+        let result = '';
+        for (let i = 0; i < bytes.length; i++) {
+          // Map byte value to an index in the alphabet
+          result += alphabet[bytes[i] % alphabet.length];
+        }
+        return result;
+      }
+
       _issueTokens(userId){
         const accessExp = Date.now() + 60*1000; // short lived 60s
         const refreshExp = Date.now() + 24*60*60*1000; // refresh 24h
-        const access = "AT-"+Math.random().toString(36).slice(2,14);
-        const refresh = "RT-"+Math.random().toString(36).slice(2,16);
+        const access = "AT-"+this._secureRandomString(12);
+        const refresh = "RT-"+this._secureRandomString(14);
         this.sessions[access] = { userId, exp: accessExp, refresh, refreshExp };
         // store mapping refresh->user
         this.sessions[refresh] = { userId, exp: refreshExp, isRefresh:true };
