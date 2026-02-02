@@ -1,0 +1,192 @@
+messages:
+  - role: system
+    content: |-
+      AI-powered device risk analysis (Risk Engine)
+
+      This system is the heart of Intune / Zero Trust / SOC.
+
+      | Factors | Examples |
+      | ---------- | ------------- |
+      | OS Version | Below required |
+      | Encryption | Disabled |
+      | Location | Unusual country |
+      | Login Time | Late at night |
+      | Jailbreak | Detected |
+      | App Risk | Dangerous app |
+
+      | Source | Examples |
+      | -------------- | ----------------- |
+      | Purchase History | Frequently purchased items |
+      | Usage Time | Morning / Night |
+      | Device Risk | Restricted access |
+      | Location | Nearby branch |
+      | Stock | Stock running low |
+  - role: user
+    content: >-
+      Meeting Transcript
+
+      Date: October 25, 2023
+
+      Time: 10:00 AM – 11:30 AM
+
+      Attendees: Aisha, Carlos, Mei-Lin, Jamal, Chloe, Ravi, Elena, Michael,
+      Fatima, Liam
+
+
+      Facilitator: Carlos
+
+      Scribe: Mei-Lin
+
+
+      Carlos: Good morning, everyone. Thanks for joining on time. Let's get
+      started. The agenda today is project updates, aligning deadlines for Q4
+      deliverables, and planning the next sprint. Anything else we need to add
+      before diving in?
+
+
+      Chloe: Yeah, if we have time at the end, let's discuss the feedback we got
+      from the client demo.
+
+
+      Carlos: Got it. We'll add that to the tail end if we have time. Let's
+      start with project updates. Aisha?
+
+
+      Aisha: Sure. The API integration is almost done—about 80% complete. The
+      main issue is the new authentication module. It's slowing us down more
+      than expected, but I'm escalating it with the IT team to get support.
+
+
+      Ravi: On the design side, the UI for the new dashboard is in its final
+      stages. We're targeting a handoff to development next Wednesday.
+
+
+      Fatima: That's great. The sales team is really happy with how things are
+      shaping up, but they're waiting on that dashboard prototype before they
+      can move forward with client walkthroughs.
+
+
+      Carlos: Okay, so action items here—Aisha, can you make a JIRA ticket
+      outlining the specifics of the authentication issue for better visibility?
+
+
+      Aisha: Yeah, I'll prioritize that and get it out by the end of the day.
+
+
+      Carlos: Thanks. Ravi, can you follow up with us by Friday to confirm the
+      final handoff date for the UI?
+
+
+      Ravi: Will do.
+
+
+      Carlos: Alright, let's move to the next topic—timelines for Q4
+      deliverables. Jamal, can you kick us off?
+
+
+      Jamal: Sure. We've hit a two-week delay on the backend implementation. The
+      issue is whether we need to move the entire timeline or if we can compress
+      it somewhere else.
+
+
+      Michael: We might be able to recover some time if we overlap the QA
+      process with the internal review stage. It's not ideal, but it's an
+      option.
+
+
+      Elena: I'm a little worried about compromising quality. If QA is rushed
+      and bugs slip through, we'll pay for it later. I think we should look at
+      using the buffer in the UAT phase instead.
+
+
+      Carlos: Okay. It sounds like we need a deeper conversation to come up with
+      a solution. Elena, Michael, Jamal—can the three of you meet tomorrow to
+      revise the timeline and suggest adjustments?
+
+
+      Elena: Works for me. Let's say 2 PM?
+
+
+      Michael: That works.
+
+
+      Jamal: Same here. I'll set something up on the calendar.
+
+
+      Carlos: Perfect. Let's keep going—sprint priorities. Liam, where are we on
+      this?
+
+
+      Liam: We're seeing a surge in customer support tickets recently, mostly
+      related to minor feature bugs. I think addressing the top offenders needs
+      to be a key priority in the next sprint.
+
+
+      Chloe: Agreed. If we can identify, say, the top 10 recurring issues and
+      prioritize fixing those, it'll reduce the noise considerably.
+
+
+      Carlos: Good suggestion. Liam, can you pull that data and filter for the
+      most pressing bugs?
+
+
+      Liam: On it. I'll have it ready for sprint planning on Monday.
+
+
+      Carlos: Thanks. Now, Chloe, you wanted to bring up feedback from the demo?
+
+
+      Chloe: Yeah, one of our key clients mentioned that they'd like more
+      customization options in the reporting features. They brought it up during
+      the Q&A after the demo.
+
+
+      Fatima: Makes sense. We've heard somewhat similar suggestions in the past.
+      I think we should scope it out and see what's feasible in the short term
+      versus a future phase.
+
+
+      Chloe: Fatima, let's sync up after this meeting and figure out what's
+      doable.
+
+
+      Fatima: Sounds good. I'll block some time with you for later today to dive
+      into it.
+
+
+      Carlos: Great. Alright, we covered the agenda. Let's quickly go over the
+      action items to make sure we're aligned.
+
+
+      Mei-Lin: I've got a draft list here. Should I go ahead?
+
+
+      Carlos: Yes, please.
+
+
+      Mei-Lin: Okay: Aisha will update JIRA with details on the authentication
+      issue by the end of today. Ravi will confirm the UI handoff date by
+      Friday. Elena, Michael, and Jamal will meet tomorrow at 2 PM to draft a
+      revised timeline. Liam will pull the top 10 recurring bugs for sprint
+      planning on Monday. Chloe and Fatima will meet today to review the client
+      feedback on reporting. Lastly, I'll send the full meeting notes later
+      today.
+
+
+      Carlos: Perfect. I'll also schedule the next meeting for Wednesday,
+      November 1, and get the calendar invite out by the end of the day.
+
+
+      Michael: Works for me.
+
+
+      Chloe: Same.
+
+
+      Carlos: Alright, thanks, everyone. Great work. Let's adjourn. Have a good
+      rest of your day!
+
+
+      Meeting adjourned at 11:25 AM.
+model: openai/gpt-4o
+responseFormat: text
