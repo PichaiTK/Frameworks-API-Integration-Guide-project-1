@@ -18,6 +18,7 @@ from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
 import uuid, datetime, json, os
+import html
 
 BASE_DIR = os.path.dirname(__file__)
 DB_PATH = "sqlite:///" + os.path.join(BASE_DIR, "pos_demo.db")
@@ -149,7 +150,8 @@ def create_order():
         qty = int(it.get("quantity", 1))
         product = Product.query.get(pid)
         if not product:
-            return (f"Product not found: {pid}", 400)
+            safe_pid = html.escape(str(pid))
+            return (f"Product not found: {safe_pid}", 400)
         if product.stock < qty:
             return (f"Insufficient stock for {product.name}", 400)
         line = product.price * qty
