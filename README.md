@@ -1,14 +1,19 @@
+[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=label)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)
+[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=issues)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)
+[![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=issue_comment)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)
+
+-------------
+
 # Frameworks-API-Integration-Guide-project-1
 
 [![.github/workflows/codeql.yml](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml/badge.svg?event=deployment)](https://github.com/PichaiTK/Type.text/actions/workflows/codeql.yml)
 
 -------------
-
-## # Frameworks API — Integration Guide (project)
+## Frameworks API — Integration Guide (project)
 
 This document describes the small integration we added to the project to support generating Netlify Frameworks API files from your framework build or from a developer UI/CLI.
 
-Files included
+### Files included
 - src/frameworks/frameworksApi.ts — helpers to write .netlify/v1/* files
 - src/cli/frameworkGenerator.ts — interactive CLI to scaffold example Frameworks API files
 - src/frontend/components/FrameworksPanel.tsx — React UI to edit payloads and POST to a server route
